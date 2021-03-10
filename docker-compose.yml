@@ -1,0 +1,17 @@
+version: '3.1'
+
+services:
+
+  mongodb:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_DATABASE: pauta-db
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: mypass
+    volumes: 
+      - ./data:/data/db
+    ports:
+      - '27017-27019:27017-27019'
+
+      # mongodb://root:mypass@localhost:27017/mongodb
