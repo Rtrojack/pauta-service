@@ -90,8 +90,6 @@ public class PautaService {
         //Todo validar cpf
 
         creditarVoto(pauta, cpf, escolhaVoto);
-
-        log.info("Voto creditado com sucesso para o Cpf {} na pauta {} - {}. Voto: {}", cpf, pauta.getId(), pauta.getTitulo(), escolhaVoto);
     }
 
     private void creditarVoto(Pauta pauta, String cpf, Boolean escolhaVoto) {
@@ -107,6 +105,8 @@ public class PautaService {
                 .build();
 
         votoRepository.save(voto);
+
+        log.info("Voto creditado com sucesso para o Cpf {} na pauta {} - {}. Voto: {}", cpf, pauta.getId(), pauta.getTitulo(), escolhaVoto);
     }
 
     private Pauta obterPauta(String id) {
