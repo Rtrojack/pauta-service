@@ -1,14 +1,14 @@
 package br.com.trojack.pauta.api.v1;
 
-import br.com.trojack.pauta.api.v1.request.AbrirVotacaoPautaRequest;
-import br.com.trojack.pauta.api.v1.request.PautaRequest;
-import br.com.trojack.pauta.api.v1.request.PautaRequestMock;
+import br.com.trojack.pauta.api.v1.request.*;
 import br.com.trojack.pauta.api.v1.response.PautaResponse;
 import br.com.trojack.pauta.api.v1.response.PautaResponseMock;
 import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.dto.PautaDtoMock;
 import br.com.trojack.pauta.exception.PautaJaVotadaException;
 import br.com.trojack.pauta.exception.PautaNaoExistenteException;
+import br.com.trojack.pauta.exception.PautaVotacaoFechadaException;
+import br.com.trojack.pauta.exception.VotoJaComputadoException;
 import br.com.trojack.pauta.service.PautaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.core.Is;
@@ -38,6 +38,7 @@ public class PautaApiTest {
 
     private static final String PATH = "/pauta";
     private static final String ABRIR_VOTACAO_PAUTA_PATH = PATH + "/abrir-votacao/";
+    private static final String VOTAR_PAUTA_PATH = PATH + "/votar/";
 
     @InjectMocks
     private PautaApi pautaApi;
@@ -143,6 +144,54 @@ public class PautaApiTest {
 
         mockMvc.perform(MockMvcRequestBuilders.put(ABRIR_VOTACAO_PAUTA_PATH + "1")
                 .content(asJsonString(abrirVotacaoPautaRequest))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    public void quandoVotarPautaInexistenteEntaoRetornarStatusNotFound() throws Exception {
+        VotarPautaRequest votarPautaRequest = VotarPautaRequestMock.criarVotarPautaRequest();
+
+        doThrow(new PautaNaoExistenteException("")).when(pautaService).votarPauta(anyString(), anyString(), anyBoolean());
+
+        mockMvc.perform(MockMvcRequestBuilders.post(VOTAR_PAUTA_PATH + "1")
+                .content(asJsonString(votarPautaRequest))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
+    @Test
+    public void quandoVotarPautaFechadaEntaoRetornarStatusExpectationFailed() throws Exception {
+        VotarPautaRequest votarPautaRequest = VotarPautaRequestMock.criarVotarPautaRequest();
+
+        doThrow(new PautaVotacaoFechadaException()).when(pautaService).votarPauta(anyString(), anyString(), anyBoolean());
+
+        mockMvc.perform(MockMvcRequestBuilders.post(VOTAR_PAUTA_PATH + "1")
+                .content(asJsonString(votarPautaRequest))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isExpectationFailed());
+    }
+
+    @Test
+    public void quandoVotarPautaEVotoJaEstiverComputadoEntaoRetornarStatusConflict() throws Exception {
+        VotarPautaRequest votarPautaRequest = VotarPautaRequestMock.criarVotarPautaRequest();
+
+        doThrow(new VotoJaComputadoException()).when(pautaService).votarPauta(anyString(), anyString(), anyBoolean());
+
+        mockMvc.perform(MockMvcRequestBuilders.post(VOTAR_PAUTA_PATH + "1")
+                .content(asJsonString(votarPautaRequest))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isConflict());
+    }
+
+    @Test
+    public void quandoVotarPautaAbertaEntaoRetornarStatusOk() throws Exception {
+        VotarPautaRequest votarPautaRequest = VotarPautaRequestMock.criarVotarPautaRequest();
+
+       doNothing().when(pautaService).votarPauta(anyString(), anyString(), anyBoolean());
+
+        mockMvc.perform(MockMvcRequestBuilders.post(VOTAR_PAUTA_PATH + "1")
+                .content(asJsonString(votarPautaRequest))
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isOk());
     }

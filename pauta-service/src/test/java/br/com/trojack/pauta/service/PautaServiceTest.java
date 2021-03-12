@@ -4,9 +4,14 @@ import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.dto.PautaDtoMock;
 import br.com.trojack.pauta.entity.Pauta;
 import br.com.trojack.pauta.entity.PautaMock;
+import br.com.trojack.pauta.entity.Voto;
+import br.com.trojack.pauta.entity.VotoMock;
 import br.com.trojack.pauta.exception.PautaJaVotadaException;
 import br.com.trojack.pauta.exception.PautaNaoExistenteException;
+import br.com.trojack.pauta.exception.PautaVotacaoFechadaException;
+import br.com.trojack.pauta.exception.VotoJaComputadoException;
 import br.com.trojack.pauta.repository.PautaRepository;
+import br.com.trojack.pauta.repository.VotoRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,6 +37,9 @@ public class PautaServiceTest {
 
     @Mock
     private PautaRepository pautaRepository;
+
+    @Mock
+    private VotoRepository votoRepository;
 
     @Mock
     private ObjectMapper objectMapper;
@@ -108,5 +116,55 @@ public class PautaServiceTest {
         pautaService.abrirVotacaoPauta(pauta.getId(), null);
 
         verify(pautaRepository, times(1)).save(any());
+    }
+
+    @Test(expected = PautaNaoExistenteException.class)
+    public void quandoVotarPautaInexistenteEntaoSubirExcecao() {
+        when(pautaRepository.findById(any())).thenReturn(Optional.empty());
+
+        pautaService.votarPauta("", "", true);
+    }
+
+    @Test(expected = PautaVotacaoFechadaException.class)
+    public void quandoVotarPautaNaoIniciadaEntaoSubirExcecao() {
+        Pauta pauta = PautaMock.criarPautaMock();
+
+        when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
+
+        pautaService.votarPauta("", "", true);
+    }
+
+    @Test(expected = PautaVotacaoFechadaException.class)
+    public void quandoVotarPautaJaEncerradaEntaoSubirExcecao() {
+        Pauta pauta = PautaMock.criarPautaVotadaMock();
+
+        when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
+
+        pautaService.votarPauta("", "", true);
+    }
+
+    @Test
+    public void quandoVotarPautaEmVotacaoEntaoSalvarVoto() {
+        Pauta pauta = PautaMock.criarPautaEmVotacaoMock();
+
+        when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
+        when(votoRepository.findByIdPautaAndCpf(any(), anyString())).thenReturn(Optional.empty());
+
+        pautaService.votarPauta(pauta.getId(), "0123456789", true);
+
+        verify(pautaRepository, times(1)).findById(any());
+        verify(votoRepository, times(1)).findByIdPautaAndCpf(any(), anyString());
+        verify(votoRepository, times(1)).save(any());
+    }
+
+    @Test(expected = VotoJaComputadoException.class)
+    public void quandoCreditarVotoJaCreditadoEntaoSubirExcecao() {
+        Pauta pauta = PautaMock.criarPautaEmVotacaoMock();
+        Voto voto = VotoMock.criarVoto();
+
+        when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
+        when(votoRepository.findByIdPautaAndCpf(any(), anyString())).thenReturn(Optional.of(voto));
+
+        pautaService.votarPauta(pauta.getId(), "0123456789", true);
     }
 }

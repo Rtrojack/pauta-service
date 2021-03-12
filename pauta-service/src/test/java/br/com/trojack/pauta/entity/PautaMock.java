@@ -21,4 +21,13 @@ public class PautaMock {
                 .dataEncerramentoVotacao(ZonedDateTime.now().minusDays(1))
                 .build();
     }
+
+    public static Pauta criarPautaEmVotacaoMock() {
+        return Pauta.builder()
+                .id(UUID.randomUUID().toString())
+                .titulo("Pauta Mock")
+                .descricao("Aceita a pauta mock?")
+                .dataEncerramentoVotacao(ZonedDateTime.now().plusMinutes(1))
+                .build();
+    }
 }

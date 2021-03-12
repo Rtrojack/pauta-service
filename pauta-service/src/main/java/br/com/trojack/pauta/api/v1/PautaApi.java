@@ -2,10 +2,13 @@ package br.com.trojack.pauta.api.v1;
 
 import br.com.trojack.pauta.api.v1.request.AbrirVotacaoPautaRequest;
 import br.com.trojack.pauta.api.v1.request.PautaRequest;
+import br.com.trojack.pauta.api.v1.request.VotarPautaRequest;
 import br.com.trojack.pauta.api.v1.response.PautaResponse;
 import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.exception.PautaJaVotadaException;
 import br.com.trojack.pauta.exception.PautaNaoExistenteException;
+import br.com.trojack.pauta.exception.PautaVotacaoFechadaException;
+import br.com.trojack.pauta.exception.VotoJaComputadoException;
 import br.com.trojack.pauta.service.PautaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -57,17 +60,33 @@ public class PautaApi {
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 
+    @PostMapping("/votar/{id}")
+    ResponseEntity votarPauta(@PathVariable String id, @Valid @RequestBody VotarPautaRequest votarPautaRequest) {
+
+        try {
+            pautaService.votarPauta(id, votarPautaRequest.getCpf(), votarPautaRequest.getEscolhaVoto());
+        } catch (PautaNaoExistenteException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (PautaVotacaoFechadaException e) {
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).build();
+        } catch (VotoJaComputadoException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+
+        return ResponseEntity.status(HttpStatus.OK).build();
+    }
+
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
+    private Map<String, String> handleValidacaoException(MethodArgumentNotValidException ex) {
+        Map<String, String> erros = new HashMap<>();
 
         ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
+            String campo = ((FieldError) error).getField();
+            String erro = error.getDefaultMessage();
+            erros.put(campo, erro);
         });
 
-        return errors;
+        return erros;
     }
 }

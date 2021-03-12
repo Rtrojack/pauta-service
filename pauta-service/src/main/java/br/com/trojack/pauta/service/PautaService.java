@@ -2,9 +2,13 @@ package br.com.trojack.pauta.service;
 
 import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.entity.Pauta;
+import br.com.trojack.pauta.entity.Voto;
 import br.com.trojack.pauta.exception.PautaJaVotadaException;
 import br.com.trojack.pauta.exception.PautaNaoExistenteException;
+import br.com.trojack.pauta.exception.PautaVotacaoFechadaException;
+import br.com.trojack.pauta.exception.VotoJaComputadoException;
 import br.com.trojack.pauta.repository.PautaRepository;
+import br.com.trojack.pauta.repository.VotoRepository;
 import br.com.trojack.pauta.util.DateTimeUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -21,6 +25,7 @@ import java.util.Optional;
 @Slf4j
 public class PautaService {
     private final PautaRepository pautaRepository;
+    private final VotoRepository votoRepository;
     private final ObjectMapper objectMapper;
 
     private static final Integer TEMPO_VOTACAO_PADRAO = 1;
@@ -45,18 +50,18 @@ public class PautaService {
     }
 
     public void abrirVotacaoPauta(String id, Integer minutosVotacao) {
-        Optional<Pauta> optionalPauta = pautaRepository.findById(id);
+        Pauta pauta;
 
-        if (optionalPauta.isEmpty()) {
+        try {
+            pauta = obterPauta(id);
+        } catch (PautaNaoExistenteException e) {
             log.warn("Tentativa de abertura de votação de pauta não existente. Id: {}", id);
-            throw new PautaNaoExistenteException("Pauta informada não existe.");
+            throw e;
         }
-
-        Pauta pauta = optionalPauta.get();
 
         if (pauta.getDataEncerramentoVotacao() != null) {
             log.warn("Tentativa de abertura de votação de pauta já votada ou em votação. Id: {} - {} - Encerramento em: {}", id, pauta.getTitulo(), DateTimeUtils.format(pauta.getDataEncerramentoVotacao()));
-            throw new PautaJaVotadaException("Pauta informada não existe.");
+            throw new PautaJaVotadaException();
         }
 
         pauta.setDataEncerramentoVotacao(minutosVotacao == null || minutosVotacao == 0
@@ -66,5 +71,57 @@ public class PautaService {
         pautaRepository.save(pauta);
 
         log.info("Pauta {} - {} aberta para votação. Encerramento em: {}", pauta.getId(), pauta.getTitulo(), DateTimeUtils.format(pauta.getDataEncerramentoVotacao()));
+    }
+
+    public void votarPauta(String id, String cpf, Boolean escolhaVoto) {
+        Pauta pauta;
+        try {
+            pauta = obterPautaEmCache(id);
+        } catch (PautaNaoExistenteException e) {
+            log.warn("Tentativa de voto em pauta não existente. Id: {} - Cpf: {}", id, cpf);
+            throw e;
+        }
+
+        if (pauta.getDataEncerramentoVotacao() == null || pauta.getDataEncerramentoVotacao().isBefore(ZonedDateTime.now())) {
+            log.warn("Tentativa de voto em pauta com votação fechada. Id: {} - Cpf: {}", id, cpf);
+            throw new PautaVotacaoFechadaException();
+        }
+
+        //Todo validar cpf
+
+        creditarVoto(pauta, cpf, escolhaVoto);
+
+        log.info("Voto creditado com sucesso para o Cpf {} na pauta {} - {}. Voto: {}", cpf, pauta.getId(), pauta.getTitulo(), escolhaVoto);
+    }
+
+    private void creditarVoto(Pauta pauta, String cpf, Boolean escolhaVoto) {
+        if (votoRepository.findByIdPautaAndCpf(pauta.getId(), cpf).isPresent()) {
+            log.warn("Voto já creditado na pauta {} - {} para o Cpf: {}", pauta.getId(), pauta.getTitulo(), cpf);
+            throw new VotoJaComputadoException();
+        }
+
+        Voto voto = Voto.builder()
+                .cpf(cpf)
+                .idPauta(pauta.getId())
+                .escolhaVoto(escolhaVoto)
+                .build();
+
+        votoRepository.save(voto);
+    }
+
+    private Pauta obterPauta(String id) {
+        Optional<Pauta> optionalPauta = pautaRepository.findById(id);
+
+        if (optionalPauta.isEmpty()) {
+            throw new PautaNaoExistenteException();
+        }
+
+        return optionalPauta.get();
+    }
+
+    private Pauta obterPautaEmCache(String id) {
+        //Todo: obter pauta do cache
+
+        return obterPauta(id);
     }
 }
