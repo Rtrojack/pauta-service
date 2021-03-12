@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 
 @Data
 @AllArgsConstructor
@@ -19,5 +19,5 @@ public class PautaDto {
 
     private String descricao;
 
-    private LocalDateTime dataEncerramentoVotacao;
+    private ZonedDateTime dataEncerramentoVotacao;
 }

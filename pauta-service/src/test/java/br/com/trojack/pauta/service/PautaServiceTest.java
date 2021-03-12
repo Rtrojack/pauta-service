@@ -4,6 +4,8 @@ import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.dto.PautaDtoMock;
 import br.com.trojack.pauta.entity.Pauta;
 import br.com.trojack.pauta.entity.PautaMock;
+import br.com.trojack.pauta.exception.PautaJaVotadaException;
+import br.com.trojack.pauta.exception.PautaNaoExistenteException;
 import br.com.trojack.pauta.repository.PautaRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
@@ -16,8 +18,10 @@ import org.mockito.junit.MockitoJUnitRunner;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -66,5 +70,43 @@ public class PautaServiceTest {
         verify(pautaRepository, times(1)).findAll();
 
         assertEquals(Arrays.asList(pautaDto), pautasRetornadas);
+    }
+
+    @Test(expected = PautaNaoExistenteException.class)
+    public void quandoAbrirVotacaoDePautaNaoExistenteEntaoSubirExcecao() {
+        when(pautaRepository.findById(any())).thenReturn(Optional.empty());
+
+        pautaService.abrirVotacaoPauta("", 0);
+    }
+
+    @Test(expected = PautaJaVotadaException.class)
+    public void quandoAbrirVotacaoDePautaJaVotadaEntaoSubirExcecao() {
+        Pauta pauta = PautaMock.criarPautaVotadaMock();
+
+        when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
+
+        pautaService.abrirVotacaoPauta(pauta.getId(), 0);
+    }
+
+    @Test
+    public void quandoAbrirVotacaoDePautaInformandoNumeroEntaoSalvarPauta() {
+        Pauta pauta = PautaMock.criarPautaMock();
+
+        when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
+
+        pautaService.abrirVotacaoPauta(pauta.getId(), 10);
+
+        verify(pautaRepository, times(1)).save(any());
+    }
+
+    @Test
+    public void quandoAbrirVotacaoDePautaSemInformarNumeroEntaoSalvarPauta() {
+        Pauta pauta = PautaMock.criarPautaMock();
+
+        when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
+
+        pautaService.abrirVotacaoPauta(pauta.getId(), null);
+
+        verify(pautaRepository, times(1)).save(any());
     }
 }

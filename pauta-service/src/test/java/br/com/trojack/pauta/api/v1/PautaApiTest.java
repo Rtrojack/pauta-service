@@ -1,11 +1,14 @@
 package br.com.trojack.pauta.api.v1;
 
+import br.com.trojack.pauta.api.v1.request.AbrirVotacaoPautaRequest;
 import br.com.trojack.pauta.api.v1.request.PautaRequest;
 import br.com.trojack.pauta.api.v1.request.PautaRequestMock;
 import br.com.trojack.pauta.api.v1.response.PautaResponse;
 import br.com.trojack.pauta.api.v1.response.PautaResponseMock;
 import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.dto.PautaDtoMock;
+import br.com.trojack.pauta.exception.PautaJaVotadaException;
+import br.com.trojack.pauta.exception.PautaNaoExistenteException;
 import br.com.trojack.pauta.service.PautaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hamcrest.core.Is;
@@ -27,12 +30,14 @@ import java.util.Arrays;
 import java.util.List;
 
 import static br.com.trojack.pauta.util.JsonConvertionUtils.asJsonString;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @RunWith(SpringRunner.class)
 public class PautaApiTest {
+
+    private static final String PATH = "/pauta";
+    private static final String ABRIR_VOTACAO_PAUTA_PATH = PATH + "/abrir-votacao/";
 
     @InjectMocks
     private PautaApi pautaApi;
@@ -61,7 +66,7 @@ public class PautaApiTest {
         when(pautaService.obterPautas()).thenReturn(Arrays.asList(pautaDto));
         when(objectMapper.convertValue(any(List.class), eq(PautaResponse[].class))).thenReturn(new PautaResponse[]{pautaResponse});
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/pauta/")
+        mockMvc.perform(MockMvcRequestBuilders.get(PATH)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.jsonPath("$[0].titulo", Is.is(pautaResponse.getTitulo())))
@@ -78,7 +83,7 @@ public class PautaApiTest {
         when(pautaService.inserirPauta(any())).thenReturn(pautaDto);
         when(objectMapper.convertValue(any(PautaDto.class), eq(PautaResponse.class))).thenReturn(pautaResponse);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/pauta/")
+        mockMvc.perform(MockMvcRequestBuilders.post(PATH)
                 .content(asJsonString(pautaRequest))
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isCreated())
@@ -88,7 +93,7 @@ public class PautaApiTest {
 
     @Test
     public void quandoReceberUmaPautaNulaEntaoRetornarStatusBadRequest() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/pauta/")
+        mockMvc.perform(MockMvcRequestBuilders.post(PATH)
                 .content(asJsonString(null))
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest());
@@ -99,10 +104,46 @@ public class PautaApiTest {
         PautaRequest pautaRequest = PautaRequestMock.criarPautaRequestMock();
         pautaRequest.setTitulo(null);
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/pauta/")
+        mockMvc.perform(MockMvcRequestBuilders.post(PATH)
                 .content(asJsonString(pautaRequest))
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.titulo", Is.is("O título é obrigatório")));
+    }
+
+    @Test
+    public void quandoAbrirVotacaoPautaNaoExistenteEntaoRetornarStatusNotFound() throws Exception {
+        AbrirVotacaoPautaRequest abrirVotacaoPautaRequest = new AbrirVotacaoPautaRequest(10);
+
+        doThrow(new PautaNaoExistenteException("")).when(pautaService).abrirVotacaoPauta(anyString(), anyInt());
+
+        mockMvc.perform(MockMvcRequestBuilders.put(ABRIR_VOTACAO_PAUTA_PATH + "1")
+                .content(asJsonString(abrirVotacaoPautaRequest))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isNotFound());
+    }
+
+    @Test
+    public void quandoAbrirVotacaoPautaJaVotadaEntaoRetornarStatusExpectationFailed() throws Exception {
+        AbrirVotacaoPautaRequest abrirVotacaoPautaRequest = new AbrirVotacaoPautaRequest(10);
+
+        doThrow(new PautaJaVotadaException("")).when(pautaService).abrirVotacaoPauta(anyString(), anyInt());
+
+        mockMvc.perform(MockMvcRequestBuilders.put(ABRIR_VOTACAO_PAUTA_PATH + "1")
+                .content(asJsonString(abrirVotacaoPautaRequest))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isExpectationFailed());
+    }
+
+    @Test
+    public void quandoAbrirVotacaoPautaEntaoRetornarStatusOk() throws Exception {
+        AbrirVotacaoPautaRequest abrirVotacaoPautaRequest = new AbrirVotacaoPautaRequest(10);
+
+        doNothing().when(pautaService).abrirVotacaoPauta(anyString(), anyInt());
+
+        mockMvc.perform(MockMvcRequestBuilders.put(ABRIR_VOTACAO_PAUTA_PATH + "1")
+                .content(asJsonString(abrirVotacaoPautaRequest))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isOk());
     }
 }
