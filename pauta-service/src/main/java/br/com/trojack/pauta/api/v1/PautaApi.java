@@ -10,6 +10,9 @@ import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.exception.*;
 import br.com.trojack.pauta.service.PautaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +42,11 @@ public class PautaApi {
     private static final String MENSAGEM_VOTO_JA_COMPUTADO = "Voto já computado para este cpf";
 
     @GetMapping
+    @ApiOperation(value = "Retorna uma lista de pautas")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Retorna a lista de pautas"),
+            @ApiResponse(code = 500, message = "Erro inesperado no servidor."),
+    })
     ResponseEntity<List<PautaResponse>> obterPautas() {
         List<PautaDto> pautasDto = pautaService.obterPautas();
 
@@ -46,12 +54,24 @@ public class PautaApi {
     }
 
     @PostMapping
+    @ApiOperation(value = "Cria uma pauta.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 201, message = "Pauta criada com sucesso"),
+            @ApiResponse(code = 500, message = "Erro inesperado no servidor."),
+    })
     ResponseEntity<PautaResponse> inserirPauta(@Valid @RequestBody PautaRequest pautaRequest) {
         PautaDto pautaDto = pautaService.inserirPauta(objectMapper.convertValue(pautaRequest, PautaDto.class));
 
         return ResponseEntity.status(HttpStatus.CREATED).body(objectMapper.convertValue(pautaDto, PautaResponse.class));
     }
 
+    @ApiOperation(value = "Abre a votação de uma pauta.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Votação da pauta aberta com sucesso."),
+            @ApiResponse(code = 404, message = "Pauta não existe."),
+            @ApiResponse(code = 417, message = "A pauta já foi votada."),
+            @ApiResponse(code = 500, message = "Erro inesperado no servidor."),
+    })
     @PutMapping("/abrir-votacao/{id}")
     ResponseEntity abrirVotacaoPauta(@PathVariable String id, @RequestBody AbrirVotacaoPautaRequest abrirVotacaoPautaRequest) {
 
@@ -60,6 +80,15 @@ public class PautaApi {
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 
+    @ApiOperation(value = "Credita um voto a uma pauta.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Voto creditado com sucesso."),
+            @ApiResponse(code = 400, message = "CPF informado inválido ou inapto a votar."),
+            @ApiResponse(code = 404, message = "Pauta não existe."),
+            @ApiResponse(code = 409, message = "O voto deste CPF já foi creditado nesta pauta."),
+            @ApiResponse(code = 417, message = "A votação da pauta não está aberta."),
+            @ApiResponse(code = 500, message = "Erro inesperado no servidor."),
+    })
     @PostMapping("/votar/{id}")
     ResponseEntity votarPauta(@PathVariable String id, @Valid @RequestBody VotarPautaRequest votarPautaRequest) {
 
@@ -72,6 +101,13 @@ public class PautaApi {
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 
+    @ApiOperation(value = "Obtem o resultado da votação de uma pauta.")
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = "Resultado retornado com sucesso."),
+            @ApiResponse(code = 404, message = "Pauta não existe."),
+            @ApiResponse(code = 417, message = "A pauta ainda não foi votada."),
+            @ApiResponse(code = 500, message = "Erro inesperado no servidor."),
+    })
     @GetMapping("/resultado/{id}")
     ResponseEntity<ResultadoPautaResponse> obterResultadoPauta(@PathVariable String id) {
         return ResponseEntity.status(HttpStatus.OK).body(objectMapper.convertValue(pautaService.obterResultadoPauta(id), ResultadoPautaResponse.class));
@@ -109,7 +145,7 @@ public class PautaApi {
         return new ErroSimplesResponse(MENSAGEM_PAUTA_FECHADA);
     }
 
-    @ResponseStatus(HttpStatus.EXPECTATION_FAILED)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(CpfInaptoAVotarException.class)
     private ErroSimplesResponse handleCpfInaptoAVotarException() {
         return new ErroSimplesResponse(MENSAGEM_CPF_INAPTO);

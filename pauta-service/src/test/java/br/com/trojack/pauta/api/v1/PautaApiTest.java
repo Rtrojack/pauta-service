@@ -199,7 +199,7 @@ public class PautaApiTest {
         mockMvc.perform(MockMvcRequestBuilders.post(VOTAR_PAUTA_PATH + "1")
                 .content(asJsonString(votarPautaRequest))
                 .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(MockMvcResultMatchers.status().isExpectationFailed());
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
     }
 
     @Test
