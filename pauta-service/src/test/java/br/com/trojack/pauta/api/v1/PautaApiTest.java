@@ -9,10 +9,7 @@ import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.dto.PautaDtoMock;
 import br.com.trojack.pauta.dto.ResultadoPautaDto;
 import br.com.trojack.pauta.dto.ResultadoPautaDtoMock;
-import br.com.trojack.pauta.exception.PautaJaVotadaException;
-import br.com.trojack.pauta.exception.PautaInexistenteException;
-import br.com.trojack.pauta.exception.PautaVotacaoFechadaException;
-import br.com.trojack.pauta.exception.VotoJaComputadoException;
+import br.com.trojack.pauta.exception.*;
 import br.com.trojack.pauta.service.PautaService;
 import br.com.trojack.pauta.util.DateTimeUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +20,7 @@ import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
@@ -173,6 +171,30 @@ public class PautaApiTest {
         VotarPautaRequest votarPautaRequest = VotarPautaRequestMock.criarVotarPautaRequest();
 
         doThrow(new PautaVotacaoFechadaException()).when(pautaService).votarPauta(anyString(), anyString(), anyBoolean());
+
+        mockMvc.perform(MockMvcRequestBuilders.post(VOTAR_PAUTA_PATH + "1")
+                .content(asJsonString(votarPautaRequest))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isExpectationFailed());
+    }
+
+    @Test
+    public void quandoVotarPautaComCpfInvalidoEntaoRetornarStatusExpectationFailed() throws Exception {
+        VotarPautaRequest votarPautaRequest = VotarPautaRequestMock.criarVotarPautaRequest();
+
+        doThrow(new CpfInvalidoException(HttpStatus.NOT_FOUND, "")).when(pautaService).votarPauta(anyString(), anyString(), anyBoolean());
+
+        mockMvc.perform(MockMvcRequestBuilders.post(VOTAR_PAUTA_PATH + "1")
+                .content(asJsonString(votarPautaRequest))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+    }
+
+    @Test
+    public void quandoVotarPautaComCpfInaptoEntaoRetornarStatusExpectationFailed() throws Exception {
+        VotarPautaRequest votarPautaRequest = VotarPautaRequestMock.criarVotarPautaRequest();
+
+        doThrow(new CpfInaptoAVotarException()).when(pautaService).votarPauta(anyString(), anyString(), anyBoolean());
 
         mockMvc.perform(MockMvcRequestBuilders.post(VOTAR_PAUTA_PATH + "1")
                 .content(asJsonString(votarPautaRequest))

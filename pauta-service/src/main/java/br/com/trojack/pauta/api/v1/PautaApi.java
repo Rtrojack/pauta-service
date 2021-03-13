@@ -5,11 +5,9 @@ import br.com.trojack.pauta.api.v1.request.PautaRequest;
 import br.com.trojack.pauta.api.v1.request.VotarPautaRequest;
 import br.com.trojack.pauta.api.v1.response.PautaResponse;
 import br.com.trojack.pauta.api.v1.response.ResultadoPautaResponse;
+import br.com.trojack.pauta.api.v1.response.ErroSimplesResponse;
 import br.com.trojack.pauta.dto.PautaDto;
-import br.com.trojack.pauta.exception.PautaJaVotadaException;
-import br.com.trojack.pauta.exception.PautaInexistenteException;
-import br.com.trojack.pauta.exception.PautaVotacaoFechadaException;
-import br.com.trojack.pauta.exception.VotoJaComputadoException;
+import br.com.trojack.pauta.exception.*;
 import br.com.trojack.pauta.service.PautaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -30,8 +28,15 @@ import java.util.Map;
 @RequestMapping("/pauta")
 public class PautaApi {
 
-    private PautaService pautaService;
-    private ObjectMapper objectMapper;
+    private final PautaService pautaService;
+    private final ObjectMapper objectMapper;
+
+    private static final String MENSAGEM_PAUTA_INEXISTENTE = "Pauta inexistente";
+    private static final String MENSAGEM_PAUTA_JA_VOTADA = "Esta pauta já foi votada";
+    private static final String MENSAGEM_PAUTA_FECHADA = "Esta pauta não está aberta a votação";
+    private static final String MENSAGEM_CPF_INAPTO = "CPF inapto para votar";
+    private static final String MENSAGEM_CPF_INVALIDO = "CPF inválido";
+    private static final String MENSAGEM_VOTO_JA_COMPUTADO = "Voto já computado para este cpf";
 
     @GetMapping
     ResponseEntity<List<PautaResponse>> obterPautas() {
@@ -50,13 +55,7 @@ public class PautaApi {
     @PutMapping("/abrir-votacao/{id}")
     ResponseEntity abrirVotacaoPauta(@PathVariable String id, @RequestBody AbrirVotacaoPautaRequest abrirVotacaoPautaRequest) {
 
-        try {
-            pautaService.abrirVotacaoPauta(id, abrirVotacaoPautaRequest.getMinutosVotacao());
-        } catch (PautaInexistenteException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        } catch (PautaJaVotadaException e) {
-            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).build();
-        }
+        pautaService.abrirVotacaoPauta(id, abrirVotacaoPautaRequest.getMinutosVotacao());
 
         return ResponseEntity.status(HttpStatus.OK).build();
     }
@@ -66,12 +65,8 @@ public class PautaApi {
 
         try {
             pautaService.votarPauta(id, votarPautaRequest.getCpf(), votarPautaRequest.getEscolhaVoto());
-        } catch (PautaInexistenteException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        } catch (PautaVotacaoFechadaException e) {
-            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).build();
         } catch (VotoJaComputadoException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErroSimplesResponse(MENSAGEM_VOTO_JA_COMPUTADO));
         }
 
         return ResponseEntity.status(HttpStatus.OK).build();
@@ -79,14 +74,7 @@ public class PautaApi {
 
     @GetMapping("/resultado/{id}")
     ResponseEntity<ResultadoPautaResponse> obterResultadoPauta(@PathVariable String id) {
-
-        try {
-            return ResponseEntity.status(HttpStatus.OK).body(objectMapper.convertValue(pautaService.obterResultadoPauta(id), ResultadoPautaResponse.class));
-        } catch (PautaInexistenteException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        } catch (PautaVotacaoFechadaException e) {
-            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).build();
-        }
+        return ResponseEntity.status(HttpStatus.OK).body(objectMapper.convertValue(pautaService.obterResultadoPauta(id), ResultadoPautaResponse.class));
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -101,5 +89,35 @@ public class PautaApi {
         });
 
         return erros;
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(PautaInexistenteException.class)
+    private ErroSimplesResponse handlePautaInexistenteException() {
+        return new ErroSimplesResponse(MENSAGEM_PAUTA_INEXISTENTE);
+    }
+
+    @ResponseStatus(HttpStatus.EXPECTATION_FAILED)
+    @ExceptionHandler(PautaJaVotadaException.class)
+    private ErroSimplesResponse handlePautaJaVotadaException() {
+        return new ErroSimplesResponse(MENSAGEM_PAUTA_JA_VOTADA);
+    }
+
+    @ResponseStatus(HttpStatus.EXPECTATION_FAILED)
+    @ExceptionHandler(PautaVotacaoFechadaException.class)
+    private ErroSimplesResponse handlePautaFechadaException() {
+        return new ErroSimplesResponse(MENSAGEM_PAUTA_FECHADA);
+    }
+
+    @ResponseStatus(HttpStatus.EXPECTATION_FAILED)
+    @ExceptionHandler(CpfInaptoAVotarException.class)
+    private ErroSimplesResponse handleCpfInaptoAVotarException() {
+        return new ErroSimplesResponse(MENSAGEM_CPF_INAPTO);
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(CpfInvalidoException.class)
+    private ErroSimplesResponse handleCpfInvalidoException() {
+        return new ErroSimplesResponse(MENSAGEM_CPF_INVALIDO);
     }
 }
