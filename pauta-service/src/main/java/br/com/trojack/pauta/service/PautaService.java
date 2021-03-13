@@ -1,10 +1,11 @@
 package br.com.trojack.pauta.service;
 
 import br.com.trojack.pauta.dto.PautaDto;
+import br.com.trojack.pauta.dto.ResultadoPautaDto;
 import br.com.trojack.pauta.entity.Pauta;
 import br.com.trojack.pauta.entity.Voto;
 import br.com.trojack.pauta.exception.PautaJaVotadaException;
-import br.com.trojack.pauta.exception.PautaNaoExistenteException;
+import br.com.trojack.pauta.exception.PautaInexistenteException;
 import br.com.trojack.pauta.exception.PautaVotacaoFechadaException;
 import br.com.trojack.pauta.exception.VotoJaComputadoException;
 import br.com.trojack.pauta.repository.PautaRepository;
@@ -54,7 +55,7 @@ public class PautaService {
 
         try {
             pauta = obterPauta(id);
-        } catch (PautaNaoExistenteException e) {
+        } catch (PautaInexistenteException e) {
             log.warn("Tentativa de abertura de votação de pauta não existente. Id: {}", id);
             throw e;
         }
@@ -77,7 +78,7 @@ public class PautaService {
         Pauta pauta;
         try {
             pauta = obterPautaEmCache(id);
-        } catch (PautaNaoExistenteException e) {
+        } catch (PautaInexistenteException e) {
             log.warn("Tentativa de voto em pauta não existente. Id: {} - Cpf: {}", id, cpf);
             throw e;
         }
@@ -90,6 +91,45 @@ public class PautaService {
         //Todo validar cpf
 
         creditarVoto(pauta, cpf, escolhaVoto);
+    }
+
+    public ResultadoPautaDto obterResultadoPauta(String id) {
+        Pauta pauta;
+
+        try {
+            pauta = obterPauta(id);
+        } catch (PautaInexistenteException e) {
+            log.warn("Tentativa de obter resultados de pauta inexistente. Id: {}", id);
+            throw e;
+        }
+
+        if (pauta.getDataEncerramentoVotacao() == null) {
+            log.warn("Tentativa de obter resultados de pauta ainda não votada. Id: {} - {}", pauta.getId(), pauta.getTitulo());
+            throw new PautaVotacaoFechadaException();
+        }
+
+        return contabilizarVotosPauta(pauta);
+    }
+
+    private ResultadoPautaDto contabilizarVotosPauta(Pauta pauta) {
+        List<Voto> votos = votoRepository.findByIdPauta(pauta.getId());
+
+        if (votos == null || votos.isEmpty()) {
+            return ResultadoPautaDto.builder()
+                    .pauta(objectMapper.convertValue(pauta, PautaDto.class))
+                    .quantidadeVotosNao(0)
+                    .quantidadeVotosSim(0)
+                    .build();
+        }
+
+        long quantidadeVotosSim = votos.stream().filter(Voto::getEscolhaVoto).count();
+        long quantidadeVotosNao = votos.stream().filter(v -> !v.getEscolhaVoto()).count();
+
+        return ResultadoPautaDto.builder()
+                .pauta(objectMapper.convertValue(pauta, PautaDto.class))
+                .quantidadeVotosSim((int) quantidadeVotosSim)
+                .quantidadeVotosNao((int) quantidadeVotosNao)
+                .build();
     }
 
     private void creditarVoto(Pauta pauta, String cpf, Boolean escolhaVoto) {
@@ -113,7 +153,7 @@ public class PautaService {
         Optional<Pauta> optionalPauta = pautaRepository.findById(id);
 
         if (optionalPauta.isEmpty()) {
-            throw new PautaNaoExistenteException();
+            throw new PautaInexistenteException();
         }
 
         return optionalPauta.get();

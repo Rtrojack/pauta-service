@@ -4,9 +4,10 @@ import br.com.trojack.pauta.api.v1.request.AbrirVotacaoPautaRequest;
 import br.com.trojack.pauta.api.v1.request.PautaRequest;
 import br.com.trojack.pauta.api.v1.request.VotarPautaRequest;
 import br.com.trojack.pauta.api.v1.response.PautaResponse;
+import br.com.trojack.pauta.api.v1.response.ResultadoPautaResponse;
 import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.exception.PautaJaVotadaException;
-import br.com.trojack.pauta.exception.PautaNaoExistenteException;
+import br.com.trojack.pauta.exception.PautaInexistenteException;
 import br.com.trojack.pauta.exception.PautaVotacaoFechadaException;
 import br.com.trojack.pauta.exception.VotoJaComputadoException;
 import br.com.trojack.pauta.service.PautaService;
@@ -51,7 +52,7 @@ public class PautaApi {
 
         try {
             pautaService.abrirVotacaoPauta(id, abrirVotacaoPautaRequest.getMinutosVotacao());
-        } catch (PautaNaoExistenteException e) {
+        } catch (PautaInexistenteException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } catch (PautaJaVotadaException e) {
             return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).build();
@@ -65,7 +66,7 @@ public class PautaApi {
 
         try {
             pautaService.votarPauta(id, votarPautaRequest.getCpf(), votarPautaRequest.getEscolhaVoto());
-        } catch (PautaNaoExistenteException e) {
+        } catch (PautaInexistenteException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } catch (PautaVotacaoFechadaException e) {
             return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).build();
@@ -74,6 +75,18 @@ public class PautaApi {
         }
 
         return ResponseEntity.status(HttpStatus.OK).build();
+    }
+
+    @GetMapping("/resultado/{id}")
+    ResponseEntity<ResultadoPautaResponse> obterResultadoPauta(@PathVariable String id) {
+
+        try {
+            return ResponseEntity.status(HttpStatus.OK).body(objectMapper.convertValue(pautaService.obterResultadoPauta(id), ResultadoPautaResponse.class));
+        } catch (PautaInexistenteException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (PautaVotacaoFechadaException e) {
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).build();
+        }
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)

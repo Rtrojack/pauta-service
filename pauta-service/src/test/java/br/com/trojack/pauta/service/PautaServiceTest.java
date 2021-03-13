@@ -2,12 +2,14 @@ package br.com.trojack.pauta.service;
 
 import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.dto.PautaDtoMock;
+import br.com.trojack.pauta.dto.ResultadoPautaDto;
+import br.com.trojack.pauta.dto.ResultadoPautaDtoMock;
 import br.com.trojack.pauta.entity.Pauta;
 import br.com.trojack.pauta.entity.PautaMock;
 import br.com.trojack.pauta.entity.Voto;
 import br.com.trojack.pauta.entity.VotoMock;
 import br.com.trojack.pauta.exception.PautaJaVotadaException;
-import br.com.trojack.pauta.exception.PautaNaoExistenteException;
+import br.com.trojack.pauta.exception.PautaInexistenteException;
 import br.com.trojack.pauta.exception.PautaVotacaoFechadaException;
 import br.com.trojack.pauta.exception.VotoJaComputadoException;
 import br.com.trojack.pauta.repository.PautaRepository;
@@ -20,7 +22,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -80,7 +81,7 @@ public class PautaServiceTest {
         assertEquals(Arrays.asList(pautaDto), pautasRetornadas);
     }
 
-    @Test(expected = PautaNaoExistenteException.class)
+    @Test(expected = PautaInexistenteException.class)
     public void quandoAbrirVotacaoDePautaNaoExistenteEntaoSubirExcecao() {
         when(pautaRepository.findById(any())).thenReturn(Optional.empty());
 
@@ -118,7 +119,7 @@ public class PautaServiceTest {
         verify(pautaRepository, times(1)).save(any());
     }
 
-    @Test(expected = PautaNaoExistenteException.class)
+    @Test(expected = PautaInexistenteException.class)
     public void quandoVotarPautaInexistenteEntaoSubirExcecao() {
         when(pautaRepository.findById(any())).thenReturn(Optional.empty());
 
@@ -160,11 +161,61 @@ public class PautaServiceTest {
     @Test(expected = VotoJaComputadoException.class)
     public void quandoCreditarVotoJaCreditadoEntaoSubirExcecao() {
         Pauta pauta = PautaMock.criarPautaEmVotacaoMock();
-        Voto voto = VotoMock.criarVoto();
+        Voto voto = VotoMock.criarVotoSim();
 
         when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
         when(votoRepository.findByIdPautaAndCpf(any(), anyString())).thenReturn(Optional.of(voto));
 
         pautaService.votarPauta(pauta.getId(), "0123456789", true);
+    }
+
+    @Test(expected = PautaInexistenteException.class)
+    public void quandoObterResultadoPautaInexistenteEntaoSubirExcecao() {
+        when(pautaRepository.findById(any())).thenReturn(Optional.empty());
+
+        pautaService.obterResultadoPauta("");
+    }
+
+    @Test(expected = PautaVotacaoFechadaException.class)
+    public void quandoObterResultadoPautaFechadaEntaoSubirExcecao() {
+        Pauta pauta = PautaMock.criarPautaMock();
+
+        when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
+
+        pautaService.obterResultadoPauta("");
+    }
+
+    @Test
+    public void quandoObterResultadoPautaEntaoRetonarResultado() {
+        Pauta pauta = PautaMock.criarPautaVotadaMock();
+        PautaDto pautaDto = PautaDtoMock.criarPautaDtoVotadaMock();
+        ResultadoPautaDto resultadoPautaDto = ResultadoPautaDtoMock.criarResultadoPautaDto();
+
+        when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
+        when(votoRepository.findByIdPauta(any())).thenReturn(Arrays.asList(VotoMock.criarVotoNao(), VotoMock.criarVotoSim()));
+        when(objectMapper.convertValue(any(Pauta.class), eq(PautaDto.class))).thenReturn(pautaDto);
+
+
+        ResultadoPautaDto resultadoRetornado = pautaService.obterResultadoPauta(pauta.getId());
+
+        assertEquals(resultadoPautaDto.getQuantidadeVotosNao(), resultadoRetornado.getQuantidadeVotosNao());
+        assertEquals(resultadoPautaDto.getQuantidadeVotosSim(), resultadoRetornado.getQuantidadeVotosSim());
+    }
+
+    @Test
+    public void quandoObterResultadoPautaSemVotosEntaoRetonarResultado() {
+        Pauta pauta = PautaMock.criarPautaVotadaMock();
+        PautaDto pautaDto = PautaDtoMock.criarPautaDtoVotadaMock();
+        ResultadoPautaDto resultadoPautaDto = ResultadoPautaDtoMock.criarResultadoPautaDtoSemVotos();
+
+        when(pautaRepository.findById(any())).thenReturn(Optional.of(pauta));
+        when(votoRepository.findByIdPauta(any())).thenReturn(null);
+        when(objectMapper.convertValue(any(Pauta.class), eq(PautaDto.class))).thenReturn(pautaDto);
+
+
+        ResultadoPautaDto resultadoRetornado = pautaService.obterResultadoPauta(pauta.getId());
+
+        assertEquals(resultadoPautaDto.getQuantidadeVotosNao(), resultadoRetornado.getQuantidadeVotosNao());
+        assertEquals(resultadoPautaDto.getQuantidadeVotosSim(), resultadoRetornado.getQuantidadeVotosSim());
     }
 }

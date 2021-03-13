@@ -5,19 +5,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.ZonedDateTime;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class PautaResponse {
+public class ResultadoPautaResponse {
 
-    private String id;
+    private PautaResponse pauta;
 
-    private String titulo;
+    private Integer quantidadeVotosSim;
 
-    private String descricao;
-
-    private ZonedDateTime dataEncerramentoVotacao;
+    private Integer quantidadeVotosNao;
 }

@@ -18,6 +18,7 @@ public class Voto {
     @Id
     private String id;
 
+    @Indexed
     private String idPauta;
 
     @Indexed
