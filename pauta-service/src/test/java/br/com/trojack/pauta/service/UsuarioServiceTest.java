@@ -1,6 +1,7 @@
 package br.com.trojack.pauta.service;
 
 import br.com.trojack.pauta.client.UserInfoClient;
+import br.com.trojack.pauta.client.response.CpfStatusResponse;
 import br.com.trojack.pauta.enumeration.CpfStatus;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -24,7 +25,7 @@ public class UsuarioServiceTest {
 
     @Test
     public void quandoCpfForAptoAVotarEntaoRetornarVerdadeiro() {
-        when(userInfoClient.obterValidadeCpf(any())).thenReturn(CpfStatus.ABLE_TO_VOTE);
+        when(userInfoClient.obterValidadeCpf(any())).thenReturn(new CpfStatusResponse(CpfStatus.ABLE_TO_VOTE));
 
         Boolean resultado = usuarioService.cpfAptoParaVotar("");
 
@@ -33,7 +34,7 @@ public class UsuarioServiceTest {
 
     @Test
     public void quandoCpfForInaptoAVotarEntaoRetornarFalso() {
-        when(userInfoClient.obterValidadeCpf(any())).thenReturn(CpfStatus.UNABLE_TO_VOTE);
+        when(userInfoClient.obterValidadeCpf(any())).thenReturn(new CpfStatusResponse(CpfStatus.UNABLE_TO_VOTE));
 
         Boolean resultado = usuarioService.cpfAptoParaVotar("");
 
