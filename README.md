@@ -1,29 +1,33 @@
-# README #
+# pauta-service #
 
-This README would normally document whatever steps are necessary to get your application up and running.
+Serviço para criação e votação de pautas dos associados.
 
-### What is this repository for? ###
+### Tecnologias utilizadas
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+- [Java 11](https://www.oracle.com/java/)
 
-### How do I get set up? ###
+- [Spring Boot](https://spring.io/projects/spring-boot)
+  
+- [MongoDb](https://www.mongodb.com/)
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
+- [Gradle](https://gradle.org/)
 
-### Contribution guidelines ###
+- [Swagger 2](https://springfox.github.io/springfox/)
+  
+- [Docker](https://www.docker.com/)
 
-* Writing tests
-* Code review
-* Other guidelines
+- [IntelliJ IDEA Community Edition](https://www.jetbrains.com/pt-br/idea/)
 
-### Who do I talk to? ###
+## Pré-requisitos
 
-* Repo owner or admin
-* Other community or team contact
+- Docker e Docker Compose instalados.
+
+## Utilizando Docker
+
+    $ docker-compose up --build -d 
+
+## Ambiente de demonstração
+
+O serviço foi deployado em uma máquina EC2, na AWS.
+
+Acesse: [http://pauta-service.trojack.com.br](http://pauta-service.trojack.com.br)
