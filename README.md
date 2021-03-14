@@ -26,6 +26,8 @@ Serviço para criação e votação de pautas dos associados.
 
     $ docker-compose up --build -d 
 
+- Após download das imagens e compilação do projeto, acesse http://localhost:8080/swagger-ui.html
+
 ## Ambiente de demonstração
 
 O serviço foi deployado em uma máquina EC2, na AWS.

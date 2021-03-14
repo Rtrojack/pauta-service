@@ -22,5 +22,3 @@ services:
       - 8080:8080
     depends_on:
       - mongodb
-
-      # mongodb://root:mypass@localhost:27017/mongodb
