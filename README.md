@@ -30,4 +30,4 @@ Serviço para criação e votação de pautas dos associados.
 
 O serviço foi deployado em uma máquina EC2, na AWS.
 
-Acesse: [http://pauta-service.trojack.com.br](http://pauta-service.trojack.com.br)
+Acesse: [http://pauta-service.trojack.com.br](http://pauta-service.trojack.com.br/swagger-ui.html)
