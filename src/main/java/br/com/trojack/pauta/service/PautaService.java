@@ -1,10 +1,8 @@
 package br.com.trojack.pauta.service;
 
-import br.com.trojack.pauta.client.UserInfoClient;
 import br.com.trojack.pauta.dto.PautaDto;
 import br.com.trojack.pauta.dto.ResultadoPautaDto;
 import br.com.trojack.pauta.entity.Pauta;
-import br.com.trojack.pauta.enumeration.CpfStatus;
 import br.com.trojack.pauta.exception.CpfInaptoAVotarException;
 import br.com.trojack.pauta.exception.PautaInexistenteException;
 import br.com.trojack.pauta.exception.PautaJaVotadaException;
@@ -15,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import springfox.documentation.annotations.Cacheable;
 
 import java.time.ZonedDateTime;
 import java.util.Arrays;
@@ -124,9 +123,8 @@ public class PautaService {
         return optionalPauta.get();
     }
 
+    @Cacheable("pauta")
     private Pauta obterPautaEmCache(String id) {
-        //Todo: obter pauta do cache
-
         return obterPauta(id);
     }
 
